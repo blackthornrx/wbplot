@@ -5,8 +5,12 @@ PACKAGE_ROOT = dirname(abspath(__file__))
 DATA_DIR = join(PACKAGE_ROOT, "data")
 DLABEL_FILE = join(DATA_DIR, "ImageParcellated.dlabel.nii")
 DSCALAR_FILE = join(DATA_DIR, "ImageDense.dscalar.nii")
+DSCALAR_92k_FILE = join(DATA_DIR, "ImageDense92k.dscalar.nii")
+DLABEL_92k_FILE = join(DATA_DIR, "ImageParcellated92k.dlabel.nii")
+MNI152_FILE = join(DATA_DIR, "MNI152_T1_1mm_brain.nii")
 DSCALAR_BACKUP = join(DATA_DIR, ".ImageDense.dscalar.nii")
 SCENE_FILE = join(DATA_DIR, "Human.scene")
+
 
 # Available Workbench color palettes
 CMAPS = ['ROY-BIG-BL',
@@ -51,3 +55,5 @@ CMAPS = ['ROY-BIG-BL',
 BILATERAL_SIZE = (1263, 835)
 LANDSCAPE_SIZE = (1680, 596)
 PORTRAIT_SIZE = (753, 835)
+VOL_SIZE = (1000, 1000)
+

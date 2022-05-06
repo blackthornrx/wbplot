@@ -35,7 +35,7 @@ pscalars_lr = np.concatenate((pscalars_r, pscalars_l))
 # The function used to save images is wbplot.wbplot.pscalar(). The first two
 # arguments are required; they are the output file and the input scalar array.
 # I'll save to my desktop:
-root = "/Users/jbb/Desktop"
+root = "/Users/kevin.anderson/Desktop"
 fout1 = join(root, "test1.png")
 # You don't have to include the PNG extension; if you dont, it will be appended.
 # You can change `root` to a directory on your local file system if you want to

@@ -1,6 +1,7 @@
 """Auxiliary functions pertaining to the manipulation of neuroimaging files. """
 
 import numpy as np
+import pandas as pd
 import nibabel as nib
 from .. import constants, config
 from . import plots
@@ -36,6 +37,60 @@ def map_unilateral_to_bilateral(pscalars, hemisphere):
     elif hemisphere == 'left':
         pscalars_lr[180:] = pscalars
     return pscalars_lr
+
+
+def check_pscalar_dict(pscalar_dict, dlabel_df):
+    """
+    Check that the pscalar dictionary matches header in dlabel file.
+
+    Parameters
+    ----------
+    pscalar_dict : dict
+        keys=parcel label
+        vals=number to plot
+
+    dlabel_df: pd.DataFrame
+        Dataframe with 'roi_num' and 'roi' columns.
+
+    Returns
+    -------
+    None
+
+    Raises
+    ------
+    ValueError : pscalars is not one-dimensional and length 59412
+    """
+    if not all(dlabel_df.roi.isin(pscalar_dict.keys())):
+        raise ValueError("The keys of 'pscalar_dict' do not match the parcels in dlabel.nii file")
+
+
+def check_vol_view(vol_view):
+    """
+    Check that the pscalar dictionary matches header in dlabel file.
+
+    Parameters
+    ----------
+    vol_view
+
+    Returns
+    -------
+    vol_view
+
+    Raises
+    ------
+    ValueError : pscalars is not one-dimensional and length 59412
+    """
+    valid_vol_views = ['sagittal', 'coronal', 'axial']
+    if type(vol_view) is not list:
+        if vol_view in valid_vol_views:
+            return [vol_view]
+        else:
+            raise ValueError("Valid parameters for 'vol_view' are ".format(valid_vol_views))
+    elif type(vol_view) is list:
+        if all(pd.Series(vol_view).isin(valid_vol_views)):
+            return vol_view
+        else:
+            raise ValueError("Valid parameters for 'vol_view' are ".format(valid_vol_views))
 
 
 def check_pscalars_unilateral(pscalars):
@@ -216,7 +271,7 @@ def extract_gifti_data(of):
 
 
 def write_parcellated_image(
-        data, fout, hemisphere=None, cmap='magma', vrange=None):
+        data, fout, hemisphere=None, cmap='magma', vrange=None, dlabel=None):
     """
     Change the colors for parcels in a dlabel file to illustrate pscalar data.
 
@@ -247,20 +302,46 @@ def write_parcellated_image(
     if bilateral. If unilateral, they must be ordered from area V1 (parcel 1) to
     area p24 (parcel 180).
     """
-
-    # Check provided inputs and pad contralateral hemisphere with 0 if necessary
-    check_parcel_hemi(pscalars=data, hemisphere=hemisphere)
     cmap = plots.check_cmap_plt(cmap)
-    pscalars_lr = map_unilateral_to_bilateral(
-        pscalars=data, hemisphere=hemisphere)
+    # Check provided inputs and pad contralateral hemisphere with 0 if necessary
+    if dlabel is None:
+        check_parcel_hemi(pscalars=data, hemisphere=hemisphere)
+        pscalars_lr = map_unilateral_to_bilateral(
+            pscalars=data, hemisphere=hemisphere)
+    else:
+        pscalars_lr = data
 
     # Change the colors assigned to each parcel and save to `fout`
-    c = Cifti()
+    c = Cifti(dlabel=dlabel)
     c.set_cmap(data=pscalars_lr, cmap=cmap, vrange=vrange)
     c.save(fout)
 
 
-def write_dense_image(dscalars, fout, palette='magma', palette_params=None):
+def dlabel_to_dscalar(dlabel, dscalar_out, dataobj=None):
+
+    # read dlabel file
+    dlabel_cii = nib.load(dlabel)
+
+    # identify the brainmodels header axis
+    for idx in dlabel_cii.header.mapped_indices:
+        cur_axis = dlabel_cii.header.get_axis(idx)
+        if type(cur_axis) == nib.cifti2.cifti2_axes.BrainModelAxis:
+            brain_model_axis = cur_axis
+
+    # create a new scalar axis    
+    scalar_axis = nib.cifti2.ScalarAxis(['scalar'])
+    # create new header
+    new_hdr = nib.cifti2.Cifti2Header.from_axes((scalar_axis, brain_model_axis))
+
+    # create new dscalar cifti
+    if dataobj is None: 
+        new_cii = nib.cifti2.cifti2.Cifti2Image(dataobj=dlabel_cii.dataobj, header=new_hdr)
+    else: 
+        new_cii = nib.cifti2.cifti2.Cifti2Image(dataobj=dataobj, header=new_hdr)
+    nib.save(new_cii, dscalar_out)
+
+
+def write_dense_image(dscalars, fout, palette='magma', palette_params=None, dscalar_override=False):
     """
     Create a new DSCALAR neuroimaging file.
 
@@ -342,9 +423,13 @@ def write_dense_image(dscalars, fout, palette='magma', palette_params=None):
     temp_data = np.asanyarray(of.dataobj)
 
     # Write new data to file
-    data_to_write = new_data.reshape(np.shape(temp_data))
-    new_img = nib.Cifti2Image(
-        dataobj=data_to_write, header=of.header, nifti_header=of.nifti_header)
+    if dscalar_override == False: 
+        data_to_write = new_data.reshape(np.shape(temp_data))
+        new_img = nib.Cifti2Image(
+            dataobj=data_to_write, header=of.header, nifti_header=of.nifti_header)
+    else: 
+        new_img = nib.load(temp_dscalar)
+        
     prefix = fout.split(".")[0]
     cifti_palette_input = prefix + "_temp.dscalar.nii"
     nib.save(new_img, cifti_palette_input)
@@ -401,8 +486,13 @@ class Cifti(object):
     a post-doctoral researcher at Yale.
     """
 
-    def __init__(self):
-        of = nib.load(config.PARCELLATION_FILE)  # must be a DLABEL file!!
+    def __init__(self, dlabel=None):
+        if dlabel == None: 
+            of = nib.load(config.PARCELLATION_FILE)  # must be a DLABEL file!!
+            self.dlabel = config.PARCELLATION_FILE
+        else: 
+            of = nib.load(dlabel)
+            self.dlabel = dlabel
         self.data = np.asanyarray(of.dataobj)
         self.header = of.header
         self.nifti_header = of.nifti_header
@@ -433,7 +523,7 @@ class Cifti(object):
         None
 
         """
-        if data.size != 360:
+        if (data.size != 360) and (self.dlabel == config.PARCELLATION_FILE):
             raise RuntimeError(
                 "pscalars must be length 360 for :class:~wbplot.images.Cifti")
 

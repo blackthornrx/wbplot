@@ -5,6 +5,70 @@ from PIL import Image
 # from matplotlib import colors, pyplot as plt, colorbar
 # from mpl_toolkits.axes_grid1 import make_axes_locatable
 from matplotlib import cm
+import pandas as pd
+import nibabel as nb
+import numpy as np
+
+def extract_dlabel_dict(dlabel_file):
+    """
+    Extract label/parcel information from dlabel.nii header
+
+    Parameters
+    ----------
+    dlabel_file : str
+        absolute path to a dlabel.nii file
+
+    Returns
+    -------
+    label_df: pd.DataFrame
+        Dataframe with parcel labels and numbers
+    """
+    try:
+        # load dlabel file
+        dlabel_cii  = nb.load(dlabel_file)
+        # create dataframe of dlabel parcels/numbers
+        parcel_list = [x for x in dlabel_cii.header.get_axis(0)][0][1]
+        label_dict  = {key:val[0] for key,val in parcel_list.items()}
+        label_df    = pd.DataFrame({'roi_num':label_dict.keys(), 'roi':label_dict.values()})
+        label_df    = label_df.loc[label_df.roi != '???']
+        return label_df
+    except ValueError as e:
+        raise ValueError(e)
+
+
+
+def make_pscalar_arr(pscalar_dict, dlabel, dlabel_df):
+    """
+    Map the dlabel roi number to the new data to plot
+
+    Parameters
+    ----------
+    pscalar_dict : dict
+        keys=parcel label
+        vals=value to plot
+
+    dlabel_df: pd.DataFrame
+        Dataframe with 'roi_num' and 'roi' columns.
+
+    dlabel: str
+        Full path to the reference dlabel cifti
+
+    Returns
+    -------
+    plot_pscalar: np.arr
+        An array of values to plot
+    """
+    dlabel_cii  = nb.load(dlabel)
+    dlabel_data = dlabel_cii.dataobj[0]
+    
+    dlabel_df['plot_vals'] = dlabel_df.roi.map(pscalar_dict)
+    map_dict = dict(zip(dlabel_df.roi_num, dlabel_df.plot_vals))
+    map_dict[0] = 0
+    dscalar_vals = np.array(pd.Series(dlabel_data).map(map_dict))
+
+    plot_pscalar = np.array(list(map_dict.values()))
+    return plot_pscalar, dscalar_vals
+
 
 
 def make_transparent(img_file):
@@ -118,7 +182,7 @@ def check_vrange(vrange):
     return tuple(list(vrange))
 
 
-def map_params_to_scene(dtype, orientation, hemisphere):
+def map_params_to_scene(dtype, orientation, hemisphere, vol_view=None):
     """
     Manually map arguments to a scene in a scene file (.scene).
 
@@ -130,6 +194,7 @@ def map_params_to_scene(dtype, orientation, hemisphere):
         the desired image orientation
     hemisphere : 'left' or 'right' or None
         the desired illustrated hemisphere
+    vol_view 
 
     Returns
     -------
@@ -145,53 +210,67 @@ def map_params_to_scene(dtype, orientation, hemisphere):
     ValueError : invalid input argument provided
 
     """
-    if dtype == 'pscalars' and hemisphere is None:
+    if (dtype == 'pscalars' and hemisphere is None
+        and vol_view is None):
         scene = 1
         width, height = constants.BILATERAL_SIZE
 
     elif (dtype == 'pscalars' and orientation == 'landscape'
-          and hemisphere == 'left'):
+          and hemisphere == 'left' and vol_view is None):
         scene = 2
         width, height = constants.LANDSCAPE_SIZE
 
     elif (dtype == 'pscalars' and orientation == 'landscape'
-          and hemisphere == 'right'):
+          and hemisphere == 'right' and vol_view is None):
         scene = 3
         width, height = constants.LANDSCAPE_SIZE
 
     elif (dtype == 'pscalars' and orientation == 'portrait'
-          and hemisphere == 'right'):
+          and hemisphere == 'right' and vol_view is None):
         scene = 4
         width, height = constants.PORTRAIT_SIZE
 
     elif (dtype == 'pscalars' and orientation == 'portrait'
-          and hemisphere == 'left'):
+          and hemisphere == 'left' and vol_view is None):
         scene = 5
         width, height = constants.PORTRAIT_SIZE
 
-    elif dtype == 'dscalars' and hemisphere is None:
+    elif (dtype == 'dscalars' and hemisphere is None
+            and vol_view is None):
         scene = 6
         width, height = constants.BILATERAL_SIZE
 
     elif (dtype == 'dscalars' and orientation == 'landscape'
-          and hemisphere == 'left'):
+          and hemisphere == 'left' and vol_view is None):
         scene = 7
         width, height = constants.LANDSCAPE_SIZE
 
     elif (dtype == 'dscalars' and orientation == 'landscape'
-          and hemisphere == 'right'):
+          and hemisphere == 'right' and vol_view is None):
         scene = 8
         width, height = constants.LANDSCAPE_SIZE
 
     elif (dtype == 'dscalars' and orientation == 'portrait'
-          and hemisphere == 'left'):
+          and hemisphere == 'left' and vol_view is None):
         scene = 9
         width, height = constants.PORTRAIT_SIZE
 
     elif (dtype == 'dscalars' and orientation == 'portrait'
-          and hemisphere == 'right'):
+          and hemisphere == 'right' and vol_view is None):
         scene = 10
         width, height = constants.PORTRAIT_SIZE
+
+    elif (dtype == 'pscalars' and vol_view == 'sagittal'):
+        scene = 11
+        width, height = constants.VOL_SIZE
+
+    elif (dtype == 'pscalars' and vol_view == 'coronal'):
+        scene = 12
+        width, height = constants.VOL_SIZE
+
+    elif (dtype == 'pscalars' and vol_view == 'axial'):
+        scene = 13
+        width, height = constants.VOL_SIZE
 
     else:
         raise ValueError("one or more input arguments is invalid")
