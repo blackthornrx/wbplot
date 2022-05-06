@@ -10,6 +10,12 @@ from matplotlib import colors as clrs
 from matplotlib import cm
 import xml.etree.cElementTree as eT
 from nibabel.cifti2.parse_cifti2 import Cifti2Parser
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.colors as clrs
+from matplotlib import colorbar
+import matplotlib.image as mpimg
+import matplotlib.colorbar as mcbar
 
 
 def map_unilateral_to_bilateral(pscalars, hemisphere):
@@ -91,6 +97,42 @@ def check_vol_view(vol_view):
             return vol_view
         else:
             raise ValueError("Valid parameters for 'vol_view' are ".format(valid_vol_views))
+
+
+def add_colormap(png_file, fig_title, cbar_title, vmin, vmax, cmap):
+
+    # get image size 
+    im = Image.open(png_file)
+    w, h = im.size
+    aspect = w / h
+
+    # create mpl figure
+    fig = plt.figure(figsize=(3, 3/aspect))
+    img_ax    = fig.add_axes([0.075, 0.075, .85, .85])
+    footer_ax = fig.add_axes([.4, .02, .2, .03])
+    img = mpimg.imread(png_file)
+    im = img_ax.imshow(img)
+    img_ax.set_title(fig_title, y=0.95, family='avenir')
+    img_ax.axis('off')
+
+    cnorm = clrs.Normalize(vmin=vmin, vmax=vmax)  # only important for tick placing
+    cmap = plt.get_cmap(cmap)
+    cbar = colorbar.ColorbarBase(
+        footer_ax, cmap=cmap, norm=cnorm, orientation='horizontal')
+    cbar.set_ticks([-2, 2])  # don't need to do this since we're going to hide them
+    cbar.outline.set_visible(False)
+    footer_ax.get_xaxis().set_tick_params(length=0, pad=-2)
+    cbar.set_ticklabels([])
+    footer_ax.text(-0.025, 0.4, vmin, ha='right', va='center', family='avenir', transform=footer_ax.transAxes,
+            fontsize=6)
+    footer_ax.text(1.025, 0.4, vmax, ha='left', va='center', family='avenir', transform=footer_ax.transAxes,
+            fontsize=6)
+    #footer_ax.text(.4, 1.025, 'title', ha='left', va='center', transform=footer_ax.transAxes,
+    #        fontsize=6)
+    cbar.ax.set_title(cbar_title, y=0.5, family='avenir', fontsize=6)
+    #cbar.set_label('sadf', loc='center', verticalalignment='top')
+    plt.savefig(png_file.replace('.png', '_cbar.png'), dpi=500)
+    plt.close()
 
 
 def check_pscalars_unilateral(pscalars):

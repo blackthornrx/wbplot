@@ -5,19 +5,165 @@ import wbplot
 import quilt3
 import tempfile
 
+from PIL import Image
+import matplotlib.pyplot as plt
+import matplotlib.colors as clrs
+from matplotlib import colorbar
+import matplotlib.image as mpimg
 
+
+# Read GBC data
 neuro_p    = quilt3.Package.browse("embarc/neuroimaging", registry="s3://trestle-curated")
 gbc_file = '/Users/kevin.anderson/task-rest_concatenated_proc-Atlas_s_hpss_res-mVWMWB1d_lpss_frameCensor_study-EMBARC_atlas-YeoPlus_stat-pearsonRtoZ_GBC.csv.gz'
 neuro_p['functional/funccon/GBC/task-rest_concatenated_proc-Atlas_s_hpss_res-mVWMWB1d_lpss_frameCensor_study-EMBARC_atlas-YeoPlus_stat-pearsonRtoZ_GBC.csv.gz'].fetch(gbc_file)
-gbc_df = pd.read_csv(gbc_file, compression='gzip')
+gbc_df   = pd.read_csv(gbc_file, compression='gzip')
+
+# GBC dict to plot
 gbc_mean = gbc_df.filter(regex='LH|RH').mean()
-dlabel       = wbplot.config.WHOLEBRAIN_PARCELLATIONS[0]
 gbc_dict = dict(gbc_mean)
+
+# dlabel reference
+dlabel = wbplot.config.WHOLEBRAIN_PARCELLATIONS[0]
+
+# define pallete parameters
+vrange = (np.percentile(gbc_mean, 2), np.percentile(gbc_mean, 98))
+vim  = -0.06
+vmax = 0.06
+palette_params = {'pos-user':(0,vmax), 'neg-user':(0,vmin)}
 
 file_out = '/Users/kevin.anderson/GBC_YeoPlus.png'
 wbplot.wbplot.pscalar_from_dict(file_out, gbc_dict, dlabel, orientation='landscape', 
-            vol_view=['sagittal','axial','coronal'], 
-            hemisphere=None, palette='videen_style', transparent=False)
+            vol_view=['sagittal','axial','coronal'], palette_params=palette_params,
+            hemisphere=None, palette='RedWhiteBlue', transparent=False)
+
+
+wbplot.wbplot.images.add_colormap(png_file, 'GBC', 'GBC', vmin, vmax, 'bwr')
+
+
+
+
+def add_colormap(png_file, fig_title, cbar_title, vmin, vmax, cmap):
+
+    # get image size 
+    im = Image.open(png_file)
+    w, h = im.size
+    aspect = w / h
+
+    # create mpl figure
+    fig = plt.figure(figsize=(3, 3/aspect))
+    img_ax    = fig.add_axes([0.075, 0.075, .85, .85])
+    footer_ax = fig.add_axes([.4, .02, .2, .03])
+    img = mpimg.imread(png_file)
+    im = img_ax.imshow(img)
+    img_ax.set_title(fig_title, y=0.95, family='avenir')
+    img_ax.axis('off')
+
+    cnorm = clrs.Normalize(vmin=vmin, vmax=vmax)  # only important for tick placing
+    cmap = plt.get_cmap(cmap)
+    cbar = colorbar.ColorbarBase(
+        footer_ax, cmap=cmap, norm=cnorm, orientation='horizontal')
+    cbar.set_ticks([-2, 2])  # don't need to do this since we're going to hide them
+    cbar.outline.set_visible(False)
+    cax.get_xaxis().set_tick_params(length=0, pad=-2)
+    cbar.set_ticklabels([])
+    footer_ax.text(-0.025, 0.4, vmin, ha='right', va='center', family='avenir', transform=footer_ax.transAxes,
+            fontsize=6)
+    footer_ax.text(1.025, 0.4, vmax, ha='left', va='center', family='avenir', transform=footer_ax.transAxes,
+            fontsize=6)
+    #footer_ax.text(.4, 1.025, 'title', ha='left', va='center', transform=footer_ax.transAxes,
+    #        fontsize=6)
+    cbar.ax.set_title(cbar_title, y=0.5, family='avenir', fontsize=6)
+    #cbar.set_label('sadf', loc='center', verticalalignment='top')
+    plt.savefig(png_file.replace('.png', '_cbar.png'), dpi=500)
+    plt.close()
+
+
+
+png_file = '/Users/kevin.anderson/GBC_YeoPlus_Sagittal.png'
+vmin = -.06
+vmax = .06
+cmap = 'coolwarm'
+def add_colormap(png_file, vmin, vmax, cmap):
+    # get image size 
+    im = Image.open(png_file)
+    w, h = im.size
+    aspect = w / h
+
+    # create mpl figure
+    fig = plt.figure(figsize=(3, 3/aspect))
+    ax  = fig.add_axes([0.075, 0.05, 0.85, 0.85])
+    cax = fig.add_axes([0.44, 0.03, 0.12, 0.03])
+
+    img = mpimg.imread(png_file)
+    im = ax.imshow(img)
+    ax.axis('off')
+
+    # Now let's add a colorbar and we're done. We'll use -2 and +2 as the limits,
+    # since that's what we used for vrange when generating the image.
+    cnorm = clrs.Normalize(vmin=vmin, vmax=vmax)  # only important for tick placing
+    cmap = plt.get_cmap(cmap)
+    cbar = colorbar.ColorbarBase(
+        cax, cmap=cmap, norm=cnorm, orientation='horizontal')
+    cbar.set_ticks([-2, 2])  # don't need to do this since we're going to hide them
+    cax.get_xaxis().set_tick_params(length=0, pad=-2)
+    cbar.set_ticklabels([])
+
+    cax.text(-0.025, 0.4, vmin, ha='right', va='center', transform=cax.transAxes,
+            fontsize=6)
+    cax.text(1.025, 0.4, vmax, ha='left', va='center', transform=cax.transAxes,
+            fontsize=6)
+    cbar.outline.set_visible(False)
+    ax.text(0.5, 1.0, "Human T1w/T2w", transform=ax.transAxes,
+            va='bottom', ha='center', fontsize=9)
+    ax.text(0.5, -0.01, "z-score", transform=ax.transAxes,
+            va='bottom', ha='center', fontsize=6)
+    plt.savefig(png_file.replace('.png', '_cbar.png'), dpi=500)
+    plt.close()
+
+
+import matplotlib.colorbar as mcbar
+cax, cbar_kwds = mcbar.make_axes(img_ax, location = 'botton',
+                            fraction=0.15, shrink=0.5, aspect=20)
+
+
+
+
+
+
+
+
+
+# Now we have to load the map into matplotlib. One way to do this is the
+# following:
+img = mpimg.imread(file_out)
+im = ax.imshow(img)
+ax.axis('off')
+
+# Now let's add a colorbar and we're done. We'll use -2 and +2 as the limits,
+# since that's what we used for vrange when generating the image.
+cnorm = clrs.Normalize(vmin=-2, vmax=2)  # only important for tick placing
+cmap = plt.get_cmap('magma')
+cbar = colorbar.ColorbarBase(
+    cax, cmap=cmap, norm=cnorm, orientation='horizontal')
+cbar.set_ticks([-2, 2])  # don't need to do this since we're going to hide them
+cax.get_xaxis().set_tick_params(length=0, pad=-2)
+cbar.set_ticklabels([])
+cax.text(-0.025, 0.4, "-2", ha='right', va='center', transform=cax.transAxes,
+         fontsize=6)
+cax.text(1.025, 0.4, "+2", ha='left', va='center', transform=cax.transAxes,
+         fontsize=6)
+cbar.outline.set_visible(False)
+ax.text(0.5, 1.015, "Human T1w/T2w", transform=ax.transAxes,
+        va='bottom', ha='center', fontsize=9)
+ax.text(0.5, 0.1, "z-score", transform=ax.transAxes,
+        va='bottom', ha='center', fontsize=6)
+plt.savefig(join(output_dir, "colorbar_test.png"), dpi=500)
+plt.close()
+# voila!
+
+
+
+
 
 
 

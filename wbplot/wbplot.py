@@ -297,6 +297,8 @@ def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', v
     scene, width, height = plots.map_params_to_scene(
         dtype='dscalars', orientation=orientation, hemisphere=hemisphere)
 
+    png_list = []
+    png_list.append(file_out)
     # Call Connectome Workbench's command-line utilities to generate an image
     cmd = 'wb_command -show-scene "{}" {} "{}" {} {}'.format(
         scene_file, scene, file_out, width, height)
@@ -314,9 +316,9 @@ def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', v
             # Call Connectome Workbench's command-line utilities to generate an image
             cmd = 'wb_command -show-scene "{}" {} "{}" {} {}'.format(
                 scene_file, scene, cur_file_out, width, height)
-            # cmd += " >/dev/null 2>&1"
+            png_list.append(cur_file_out)
             system(cmd)
             if transparent:  # Make background (defined as white pixels) transparent
                 plots.make_transparent(cur_file_out)
-
+    return png_list
 
