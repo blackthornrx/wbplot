@@ -3,8 +3,27 @@ import pandas as pd
 import nibabel as nb
 import wbplot
 import quilt3
-
 import tempfile
+
+
+neuro_p    = quilt3.Package.browse("embarc/neuroimaging", registry="s3://trestle-curated")
+gbc_file = '/Users/kevin.anderson/task-rest_concatenated_proc-Atlas_s_hpss_res-mVWMWB1d_lpss_frameCensor_study-EMBARC_atlas-YeoPlus_stat-pearsonRtoZ_GBC.csv.gz'
+neuro_p['functional/funccon/GBC/task-rest_concatenated_proc-Atlas_s_hpss_res-mVWMWB1d_lpss_frameCensor_study-EMBARC_atlas-YeoPlus_stat-pearsonRtoZ_GBC.csv.gz'].fetch(gbc_file)
+gbc_df = pd.read_csv(gbc_file, compression='gzip')
+gbc_mean = gbc_df.filter(regex='LH|RH').mean()
+dlabel       = wbplot.config.WHOLEBRAIN_PARCELLATIONS[0]
+gbc_dict = dict(gbc_mean)
+
+file_out = '/Users/kevin.anderson/GBC_YeoPlus.png'
+wbplot.wbplot.pscalar_from_dict(file_out, gbc_dict, dlabel, orientation='landscape', 
+            vol_view=['sagittal','axial','coronal'], 
+            hemisphere=None, palette='videen_style', transparent=False)
+
+
+
+
+
+
 
 neuro_p    = quilt3.Package.browse("embarc/neuroimaging", registry="s3://trestle-curated")
 cabnp_tsnr = pd.read_csv('/Users/kevin.anderson/task-restrun_1_proc-Atlas_study-EMBARC_atlas-CABNP_stat-TSNR.csv.gz', compression='gzip')
@@ -13,6 +32,16 @@ avg_tsnr       = cabnp_tsnr[parcel_columns].mean()
 
 pscalar_dict = dict(avg_tsnr)
 dlabel       = wbplot.config.WHOLEBRAIN_PARCELLATIONS[1]
+
+file_out = '/Users/kevin.anderson/test.png'
+orientation='landscape'
+hemisphere=None
+vrange=None
+cmap='magma'
+transparent=False
+
+vol_view = 'sagittal'
+    
 
 file_out = '/Users/kevin.anderson/test.png'
 wbplot.wbplot.pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', 
@@ -67,9 +96,10 @@ def dlabel_to_dscalar(dlabel):
     brain_axis  = dlabel_cii.header.get_axis(1)
     new_hdr = nib.cifti2.Cifti2Header.from_axes((scalar_axis, brain_axis))
 
-    
+    new_cii = nib.ci    
 
-    nb.save(dlabel_cii, '/Users/kevin.anderson/test.dscalar.nii')
+    new_cii = nib.cifti2.cifti2.Cifti2Image(dataobj=dlabel_cii.dataobj, header=new_hdr)
+    nb.save(new_cii, '/Users/kevin.anderson/test.dscalar.nii')
 
     dlabel_cii.dataobj[0]
 

@@ -428,8 +428,8 @@ def write_dense_image(dscalars, fout, palette='magma', palette_params=None, dsca
         new_img = nib.Cifti2Image(
             dataobj=data_to_write, header=of.header, nifti_header=of.nifti_header)
     else: 
-        new_img = nib.load(temp_dscalar)
-        
+        new_img = nib.load(dscalar_override)
+
     prefix = fout.split(".")[0]
     cifti_palette_input = prefix + "_temp.dscalar.nii"
     nib.save(new_img, cifti_palette_input)

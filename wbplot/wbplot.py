@@ -196,7 +196,7 @@ def dscalar(file_out, dscalars, orientation='landscape',
 
 
 def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', vol_view=None, 
-            hemisphere=None, vrange=None, cmap='magma', transparent=False):
+            hemisphere=None, palette='magma', palette_params=None, transparent=False):
     """
     Save an image of parcellated scalars using Connnectome Workbench.
 
@@ -238,7 +238,7 @@ def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', v
         file_out += ".png"
 
     # Perform checks on inputs
-    cmap = plots.check_cmap_plt(cmap)
+    #cmap = plots.check_cmap_plt(cmap)
     orientation = plots.check_orientation(orientation)
 
     # extract label parcel information from cifti header
@@ -254,11 +254,11 @@ def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', v
     temp_dscalar = join(temp_dir, dlabel_fname)
 
     plot_dscalar_dat = dscalar_dat.reshape((1, dscalar_dat.size))
-    dlabel_to_dscalar(dlabel, temp_dscalar, dataobj=plot_dscalar_dat)
+    images.dlabel_to_dscalar(dlabel, temp_dscalar, dataobj=plot_dscalar_dat)
 
     # Write `dscalars` to a new neuroimaging file in a temp directory & update
     # color palette
-    palette    = 'cool-warm'
+    #palette    = 'cool-warm'
     temp_dir   = tempfile.gettempdir()
     temp_cifti = join(temp_dir, split(constants.DSCALAR_FILE)[1])
 
