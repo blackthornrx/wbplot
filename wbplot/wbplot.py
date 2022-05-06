@@ -256,6 +256,13 @@ def pscalar_from_dict(file_out, pscalar_dict, dlabel, orientation='landscape', v
     plot_dscalar_dat = dscalar_dat.reshape((1, dscalar_dat.size))
     images.dlabel_to_dscalar(dlabel, temp_dscalar, dataobj=plot_dscalar_dat)
 
+
+    # copy data to tmp dir
+    orig = join(wbplot.config.DATA_DIR, 'HumanCorticalParcellations')
+    dest = join(temp_dir, 'HumanCorticalParcellations')
+    cmd  = "cp -r {} {}".format(orig, dest)
+    system(cmd)
+    
     # Write `dscalars` to a new neuroimaging file in a temp directory & update
     # color palette
     #palette    = 'cool-warm'
