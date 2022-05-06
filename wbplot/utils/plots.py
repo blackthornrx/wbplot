@@ -67,7 +67,7 @@ def make_pscalar_arr(pscalar_dict, dlabel, dlabel_df):
     dscalar_vals = np.array(pd.Series(dlabel_data).map(map_dict))
 
     plot_pscalar = np.array(list(map_dict.values()))
-    return plot_pscalar, dscalar_vals
+    return plot_pscalar, dscalar_vals, 
 
 
 

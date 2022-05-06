@@ -27,17 +27,17 @@ dlabel = wbplot.config.WHOLEBRAIN_PARCELLATIONS[0]
 
 # define pallete parameters
 vrange = (np.percentile(gbc_mean, 2), np.percentile(gbc_mean, 98))
-vim  = -0.06
+vmin  = -0.06
 vmax = 0.06
 palette_params = {'pos-user':(0,vmax), 'neg-user':(0,vmin)}
 
 file_out = '/Users/kevin.anderson/GBC_YeoPlus.png'
-wbplot.wbplot.pscalar_from_dict(file_out, gbc_dict, dlabel, orientation='landscape', 
+png_list = wbplot.wbplot.pscalar_from_dict(file_out, gbc_dict, dlabel, orientation='landscape', 
             vol_view=['sagittal','axial','coronal'], palette_params=palette_params,
-            hemisphere=None, palette='RedWhiteBlue', transparent=False)
+            hemisphere=None, palette='cool-warm', transparent=False)
 
-
-wbplot.wbplot.images.add_colormap(png_file, 'GBC', 'GBC', vmin, vmax, 'bwr')
+for png_file in png_list:
+    wbplot.wbplot.images.add_colormap(png_file, 'GBC', 'GBC', vmin, vmax, 'coolwarm')
 
 
 
